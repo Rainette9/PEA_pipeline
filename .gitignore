@@ -1,7 +1,5 @@
 # secrets
 .ftp_password
-# EddyPro binary distribution (copy from an existing workstation, see SETUP_NEW_WORKSTATION.md)
-eddypro/eddypro-engine/
 # EddyPro scratch and per-job work dirs
 eddypro/work/
 eddypro/tmp/

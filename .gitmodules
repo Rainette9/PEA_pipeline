@@ -1,0 +1,4 @@
+[submodule "eddypro/eddypro-engine"]
+	path = eddypro/eddypro-engine
+	url = https://github.com/LI-COR-Environmental/eddypro-engine.git
+	ignore = untracked

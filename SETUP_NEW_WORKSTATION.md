@@ -8,12 +8,15 @@ rsync to jed) from the same scripts. Everything below assumes `PEA_ROOT=/data/..
 - Ubuntu 22.04/24.04, `rsync`, `python3` (3.10+; standard library only), `git`.
 - Julia 1.11 or 1.12 (snap `julia` on the old machine; https://julialang.org/install). The Manifest was last
   resolved with 1.12.5; a different minor version rewrites `Manifest.toml` (versions of stdlib jlls only).
-- EddyPro 7 Linux engine: copy `transfer_scripts/eddypro/eddypro-engine/` from the old workstation (53 MB, not in git).
+- `gfortran` and `make` (`sudo apt install gfortran make`) to build the EddyPro engine (step 2a).
+- EddyPro 7 Linux engine: LI-COR's source is a git submodule of this repo, built in step 2a. The executables
+  are not in git (LI-COR's repo ignores `bin/`).
 
 ## 2. Code
 ```
 mkdir -p $PEA_ROOT && cd $PEA_ROOT
-git clone <PEA_pipeline repo> transfer_scripts            # pipeline scripts (this folder)
+git clone --recurse-submodules https://github.com/Rainette9/PEA_pipeline.git transfer_scripts   # pipeline scripts + EddyPro engine source
+#  -> then build the EddyPro engine (step 2a)
 git clone https://github.com/Rainette9/DataProcessingScriptsJulia transfer_scripts/DataProcessingScriptsJulia
 cd transfer_scripts/DataProcessingScriptsJulia && git checkout v3   # or main
 julia --project=. -e 'using Pkg; Pkg.Registry.update(); Pkg.instantiate(); Pkg.status("Peddy")'
@@ -22,6 +25,32 @@ julia --project=. -e 'using Pkg; Pkg.Registry.update(); Pkg.instantiate(); Pkg.s
 Secrets and keys (never in git): `transfer_scripts/.ftp_password` (mode 600), `~/.ssh/epfl` (+ `.pub`) for
 `engbers@jed.hpc.epfl.ch`, and `ssh-keyscan jed.hpc.epfl.ch >> ~/.ssh/known_hosts`.
 Set the git identity: `git config user.name Rainette; git config user.email rainette.engbers@epfl.ch`.
+
+## 2a. EddyPro engine (submodule, build from source)
+`eddypro/eddypro-engine/` is a git submodule pointing at https://github.com/LI-COR-Environmental/eddypro-engine,
+pinned to commit 3cabe63 ("Merge tag 'v7.0.9'"), the source of the engine used for the 2025 v3 run on the PC.
+The scripts expect the executables in `eddypro/eddypro-engine/bin/linux/` and a writable `tmp/` next to them
+(the engine writes scratch files there). After cloning this repo in step 2:
+```
+cd $PEA_ROOT/transfer_scripts
+git submodule update --init          # not needed if you cloned with --recurse-submodules
+cd eddypro/eddypro-engine/prj && make    # builds eddypro_rp and eddypro_fcc; run make from prj/, paths are relative
+cd .. && mkdir -p tmp
+ls -l bin/linux/                     # eddypro_rp (3,084,160 bytes) and eddypro_fcc (2,385,104 bytes)
+ldd bin/linux/eddypro_rp | grep 'not found'   # no output = all libraries found
+```
+- `make` ends with `mv: cannot stat '*.mod'`. That message is harmless.
+- Built with gfortran 13.3 (Ubuntu 24.04) this gives binaries byte-identical to the PC's v3 engine (checked
+  2026-10-28). Another gfortran version can change results in the last digits; check with the March 2025
+  equivalence sample (`v3_check_pc/`).
+- Rebuild after a compiler or OS upgrade: `cd eddypro/eddypro-engine/prj && make clean_all && make`.
+- Build products (`bin/`, `obj/`, `tmp/`) stay untracked; `.gitmodules` sets `ignore = untracked`, so they do not
+  show up in `git status` of this repo.
+- Moving an existing machine to the submodule: if `eddypro/eddypro-engine/` already exists as a plain copied folder,
+  move it aside (`mv eddypro/eddypro-engine eddypro/eddypro-engine.old`) before `git pull` +
+  `git submodule update --init`, then build as above and delete the old folder once a test month runs.
+- Alternative without building: copy `eddypro/eddypro-engine/bin/linux/` from a working machine. The executables
+  only need `libgfortran5` at run time.
 
 ## 3. Data (copy from the old workstation, same layout)
 ```
