@@ -1,0 +1,15 @@
+# secrets
+.ftp_password
+# EddyPro binary distribution (copy from an existing workstation, see SETUP_NEW_WORKSTATION.md)
+eddypro/eddypro-engine/
+# EddyPro scratch and per-job work dirs
+eddypro/work/
+eddypro/tmp/
+# logs and caches
+*.log
+__pycache__/
+typescript
+# the Julia driver is its own repository (github.com/Rainette9/DataProcessingScriptsJulia)
+DataProcessingScriptsJulia/
+# old template backups and EddyPro scratch files
+eddypro/eddypro_scripts/_old/
