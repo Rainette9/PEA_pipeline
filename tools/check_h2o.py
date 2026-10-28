@@ -10,9 +10,9 @@ and sonic temperature Ts give an implied relative humidity:
 Expected medians ~30-60 % following the probe RH; no negative H2O, nothing > 400.
 
 Usage:
-  check_h2o.py summary DIR [DIR ...]            per-month summary (DIR = processed_HF/SENSOR or a month dir)
-  check_h2o.py days DIR DATE [DATE ...]         per-hour table for given dates (YYYY-MM-DD)
-  check_h2o.py compare DIR_A DIR_B              per-hour Pearson r and mean difference for files present in both
+  tools/check_h2o.py summary DIR [DIR ...]            per-month summary (DIR = processed_HF/SENSOR or a month dir)
+  tools/check_h2o.py days DIR DATE [DATE ...]         per-hour table for given dates (YYYY-MM-DD)
+  tools/check_h2o.py compare DIR_A DIR_B              per-hour Pearson r and mean difference for files present in both
 """
 import glob, math, os, sys
 import numpy as np

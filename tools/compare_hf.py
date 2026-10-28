@@ -2,7 +2,7 @@
 """
 Compare two sets of processed hourly HF files (ICSV, 1 header row) hour by hour.
 
-    python3 compare_hf.py DIR_A DIR_B [--date YYYY-MM-DD] [--sensor S]
+    python3 tools/compare_hf.py DIR_A DIR_B [--date YYYY-MM-DD] [--sensor S]
 
 For every file name present in both directories (optionally only one date) it reports per
 variable: rows, NaN count in A and B, number of samples NaN in exactly one of them, and the

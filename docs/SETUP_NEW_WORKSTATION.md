@@ -71,14 +71,14 @@ PEA_HF_OUT=/tmp/pea_test PEA_LF_OUT=/tmp/pea_test julia --project=DataProcessing
     DataProcessingScriptsJulia/scripts/run_sensor.jl LOWER --restart --no-save-slow --from <yesterday> --to <yesterday>
                                                                  # 24 hourly files, log shows diag_margin=2, couple_sonic
 MONTHS=<last month> SENSORS=BOTTOM HF_BASE=/tmp/pea_test_hf ... bash run_eddypro_months.sh   # or a real month with ARCHIVE_DIR
-rsync -n ... (see sync_toscitas.sh; run it once with `-n` added to the rsync line)
+rsync -n ... (see sync_to_jed.sh; run it once with `-n` added to the rsync line)
 ```
 
-## 5. Cron (same three lines as on the old machine; `crontab -e`)
+## 5. Cron (the three lines in `crontab.txt`; install with `crontab -e`)
 ```
 3 2 * * *     $PEA_ROOT/transfer_scripts/run_daily_pipeline.sh
 0 10 1 * *    $PEA_ROOT/transfer_scripts/run_monthly_eddypro.sh
-0 6 */10 * *  $PEA_ROOT/transfer_scripts/sync_toscitas.sh >> $PEA_ROOT/transfer_scripts/sync.log 2>&1
+0 6 */10 * *  $PEA_ROOT/transfer_scripts/sync_to_jed.sh >> $PEA_ROOT/transfer_scripts/sync.log 2>&1
 ```
 If `PEA_ROOT` is not the default, put `PEA_ROOT=/path` at the top of the crontab. On the old machine comment the
 three lines out (`crontab -e`) the same day, so the two workstations never both write to jed.

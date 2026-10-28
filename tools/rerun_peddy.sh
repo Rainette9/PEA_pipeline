@@ -2,10 +2,10 @@
 # Launch a full Peddy rerun (--restart) for one year and a list of sensors as detached,
 # month-aligned parallel chunks (one Julia process each) plus one --slow-only run per sensor
 # that writes the cleaned OneMin slow data. Output goes to a separate *_rerun tree; swap it
-# into place afterwards with swap_in_rerun.sh (so the daily cron keeps running meanwhile).
+# into place afterwards with tools/swap_in_rerun.sh (so the daily cron keeps running meanwhile).
 #
-#   bash rerun_peddy.sh 2026                      # all four sensors, raw from $PEA_ROOT/data
-#   bash rerun_peddy.sh 2025 "SFC LOWER UPPER"    # raw from $PEA_ROOT/2025/converted
+#   bash tools/rerun_peddy.sh 2026                      # all four sensors, raw from $PEA_ROOT/data
+#   bash tools/rerun_peddy.sh 2025 "SFC LOWER UPPER"    # raw from $PEA_ROOT/2025/converted
 #
 # Environment: PEA_ROOT (default /data/disk1/shared/PEA), CHUNKS (default 3 chunks per year),
 #   PEA_INPUT_BASE / PEA_HF_OUT / PEA_LF_OUT override the per-year defaults below,
@@ -17,7 +17,7 @@
 YEAR=${1:?usage: rerun_peddy.sh YEAR ["SENSORS"]}
 SENSORS=${2:-"SFC LOWER UPPER BOTTOM"}
 PEA_ROOT=${PEA_ROOT:-/data/disk1/shared/PEA}
-TS=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+TS=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)   # repo root (this script lives in tools/)
 JL=$TS/DataProcessingScriptsJulia
 LOGS=$PEA_ROOT/logs
 mkdir -p "$LOGS"

@@ -1,6 +1,6 @@
 #!/bin/bash
 # EddyPro engine: run eddypro_rp + eddypro_fcc for a list of months and sensors.
-# Called by run_monthly_eddypro.sh (cron) and run_bulk_eddypro.sh (manual), or directly:
+# Called by run_monthly_eddypro.sh (cron) and tools/run_bulk_eddypro.sh (manual), or directly:
 #
 #   MONTHS="202601 202602" bash run_eddypro_months.sh
 #   HF_BASE=/data/disk1/shared/PEA/2025/processed_HF LF_BASE=/data/disk1/shared/PEA/2025/processed_LF \

@@ -2,7 +2,7 @@
 """
 Compare two EddyPro full_output files row by row (key = date + time).
 
-    python3 compare_full_output.py FILE_A FILE_B [--top N]
+    python3 tools/compare_full_output.py FILE_A FILE_B [--top N]
 
 Prints the rows present in only one file, then per numeric column the number of rows where
 both are valid (not -9999), the number of -9999 mismatches, the max absolute difference and the

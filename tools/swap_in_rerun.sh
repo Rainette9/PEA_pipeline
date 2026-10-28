@@ -8,15 +8,15 @@
 # while the rerun was running. Refuses to run while a Julia sensor script is active or close to the
 # daily cron.
 #
-#   nohup bash swap_in_rerun.sh 2026 > logs/swap_2026.log 2>&1 &        # all four sensors
-#   bash swap_in_rerun.sh 2025 "SFC LOWER UPPER"                        # 2025 tree ($PEA_ROOT/2025/...)
+#   nohup bash tools/swap_in_rerun.sh 2026 > logs/swap_2026.log 2>&1 &        # all four sensors
+#   bash tools/swap_in_rerun.sh 2025 "SFC LOWER UPPER"                        # 2025 tree ($PEA_ROOT/2025/...)
 # Environment: PEA_ROOT, ARCHIVE_ROOT (default $PEA_ROOT/archive), STAMP (default today, YYYYMMDD),
 #   RESUME=0 to skip the resume runs.
 set -u
 YEAR=${1:?usage: swap_in_rerun.sh YEAR ["SENSORS"]}
 SENSORS=${2:-"SFC LOWER UPPER BOTTOM"}
 PEA_ROOT=${PEA_ROOT:-/data/disk1/shared/PEA}
-TS=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+TS=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)   # repo root (this script lives in tools/)
 JL=$TS/DataProcessingScriptsJulia
 STAMP=${STAMP:-$(date -u +%Y%m%d)}
 if [ "$YEAR" = 2025 ]; then BASE=$PEA_ROOT/2025; RESUME=${RESUME:-0}; else BASE=$PEA_ROOT; RESUME=${RESUME:-1}; fi
