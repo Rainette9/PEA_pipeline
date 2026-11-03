@@ -82,7 +82,7 @@ PEA_HF_OUT=/tmp/pea_test PEA_LF_OUT=/tmp/pea_test julia --project=DataProcessing
     DataProcessingScriptsJulia/scripts/run_sensor.jl LOWER --restart --no-save-slow --from <yesterday> --to <yesterday>
                                                                  # 24 hourly files, log shows diag_margin=2, couple_sonic
 MONTHS=<last month> SENSORS=BOTTOM HF_BASE=/tmp/pea_test_hf LF_BASE=/tmp/pea_test_lf bash run_eddypro.sh   # or a real month with ARCHIVE_DIR
-rsync -n ... (see sync_to_jed.sh; run it once with `-n` added to the rsync line)
+DRY_RUN=1 bash sync_to_jed.sh                                   # rsync -n against jed, nothing copied
 ```
 
 ## 5. Cron (the three lines in `crontab.txt`; install with `crontab -e`)
@@ -90,7 +90,7 @@ rsync -n ... (see sync_to_jed.sh; run it once with `-n` added to the rsync line)
 PATH=/usr/local/bin:/usr/bin:/bin:<directory of julia>
 3 2 * * *     $PEA_ROOT/transfer_scripts/run_daily_pipeline.sh
 0 10 1 * *    $PEA_ROOT/transfer_scripts/run_eddypro.sh
-0 6 */10 * *  $PEA_ROOT/transfer_scripts/sync_to_jed.sh >> $PEA_LOGS/sync_jed.log 2>&1
+0 6 */10 * *  $PEA_ROOT/transfer_scripts/sync_to_jed.sh
 ```
 cron does not expand `$PEA_ROOT`, `$PEA_LOGS` or `~`: write the paths out, including the `julia` directory in
 `PATH` (`dirname $(which julia)`). If `PEA_ROOT` or `PEA_LOGS` are not the defaults, put `PEA_ROOT=/path` and

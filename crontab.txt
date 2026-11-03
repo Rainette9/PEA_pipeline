@@ -15,4 +15,4 @@ PATH=/usr/local/bin:/usr/bin:/bin:/snap/bin
 0 10 1 * *    /data/disk1/shared/PEA/transfer_scripts/run_eddypro.sh
 
 # Every 10 days 06:00: copy processed and raw data to jed. Log: sync_jed.log
-0 6 */10 * *  /data/disk1/shared/PEA/transfer_scripts/sync_to_jed.sh >> /data/disk1/shared/PEA/logs/sync_jed.log 2>&1
+0 6 */10 * *  /data/disk1/shared/PEA/transfer_scripts/sync_to_jed.sh
