@@ -2,7 +2,9 @@
 
 Target: the new machine runs exactly what cryosAlp1008 runs today (FTP sync → Peddy v3 → EddyPro v3 →
 rsync to jed) from the same scripts. Everything below assumes `PEA_ROOT=/data/.../PEA` on the new machine
-(any path; the scripts read `PEA_ROOT`, default `/data/disk1/shared/PEA`).
+(any path; all scripts source `pea_env.sh`, which reads `PEA_ROOT`, default `/data/disk1/shared/PEA`, and
+`PEA_LOGS`, default `$PEA_ROOT/logs`). The code is cloned on the local disk; the data tree may be a network
+share. If it is, set `PEA_LOGS` to a local folder (CIFS has no exec bits and is slow for appending logs).
 
 ## 1. Software
 - Ubuntu 22.04/24.04, `rsync`, `python3` (3.10+; standard library only), `git`.
@@ -16,7 +18,7 @@ rsync to jed) from the same scripts. Everything below assumes `PEA_ROOT=/data/..
 ```
 mkdir -p $PEA_ROOT && cd $PEA_ROOT
 git clone --recurse-submodules https://github.com/Rainette9/PEA_pipeline.git transfer_scripts
-#  -> pipeline scripts + submodules DataProcessingScriptsJulia (pinned to tag v3) and EddyPro engine source
+#  -> pipeline scripts + submodules DataProcessingScriptsJulia (pinned to tag v3.1) and EddyPro engine source
 #  -> then build the EddyPro engine (step 2a)
 cd transfer_scripts/DataProcessingScriptsJulia
 julia --project=. -e 'using Pkg; Pkg.Registry.update(); Pkg.instantiate(); Pkg.status("Peddy")'
@@ -63,11 +65,14 @@ ldd bin/linux/eddypro_rp | grep 'not found'   # no output = all libraries found
 rsync -aH --info=progress2 cryos@128.178.60.219:/data/disk1/shared/PEA/data/            $PEA_ROOT/data/
 rsync -aH cryos@128.178.60.219:/data/disk1/shared/PEA/processed_HF/  $PEA_ROOT/processed_HF/
 rsync -aH cryos@128.178.60.219:/data/disk1/shared/PEA/processed_LF/  $PEA_ROOT/processed_LF/
-rsync -aH cryos@128.178.60.219:/data/disk1/shared/PEA/2025/          $PEA_ROOT/2025/
+rsync -aH cryos@128.178.60.219:/data/disk1/shared/PEA/2025/converted/ $PEA_ROOT/2025/converted/
 mkdir -p $PEA_ROOT/logs $PEA_ROOT/archive
 ```
 `data/ftp_sync_state.json` (inside `data/`) must come along, otherwise the FTP sync re-downloads the last 30 days.
 Do the final `data/` + `processed_*` rsync after stopping the old cron (step 5), so nothing is missed.
+`2025/converted/` is the raw input of the 2025 season (logger cards). Its output is reprocessed into the main
+`processed_HF/` and `processed_LF/` trees with `PEA_INPUT_BASE=$PEA_ROOT/2025/converted bash tools/rerun_peddy.sh 2025`
+followed by `tools/swap_in_rerun.sh 2025`; the old `2025/processed_*` trees on cryosAlp1008 are not needed.
 
 ## 4. Dry runs (in this order)
 ```
@@ -76,21 +81,24 @@ python3 datasync-snowflux-pea.py --dry-run                      # FTP reachable,
 PEA_HF_OUT=/tmp/pea_test PEA_LF_OUT=/tmp/pea_test julia --project=DataProcessingScriptsJulia \
     DataProcessingScriptsJulia/scripts/run_sensor.jl LOWER --restart --no-save-slow --from <yesterday> --to <yesterday>
                                                                  # 24 hourly files, log shows diag_margin=2, couple_sonic
-MONTHS=<last month> SENSORS=BOTTOM HF_BASE=/tmp/pea_test_hf ... bash run_eddypro_months.sh   # or a real month with ARCHIVE_DIR
+MONTHS=<last month> SENSORS=BOTTOM HF_BASE=/tmp/pea_test_hf LF_BASE=/tmp/pea_test_lf bash run_eddypro.sh   # or a real month with ARCHIVE_DIR
 rsync -n ... (see sync_to_jed.sh; run it once with `-n` added to the rsync line)
 ```
 
 ## 5. Cron (the three lines in `crontab.txt`; install with `crontab -e`)
 ```
+PATH=/usr/local/bin:/usr/bin:/bin:<directory of julia>
 3 2 * * *     $PEA_ROOT/transfer_scripts/run_daily_pipeline.sh
-0 10 1 * *    $PEA_ROOT/transfer_scripts/run_monthly_eddypro.sh
-0 6 */10 * *  $PEA_ROOT/transfer_scripts/sync_to_jed.sh >> $PEA_ROOT/transfer_scripts/sync.log 2>&1
+0 10 1 * *    $PEA_ROOT/transfer_scripts/run_eddypro.sh
+0 6 */10 * *  $PEA_ROOT/transfer_scripts/sync_to_jed.sh >> $PEA_LOGS/sync_jed.log 2>&1
 ```
-If `PEA_ROOT` is not the default, put `PEA_ROOT=/path` at the top of the crontab. On the old machine comment the
-three lines out (`crontab -e`) the same day, so the two workstations never both write to jed.
+cron does not expand `$PEA_ROOT`, `$PEA_LOGS` or `~`: write the paths out, including the `julia` directory in
+`PATH` (`dirname $(which julia)`). If `PEA_ROOT` or `PEA_LOGS` are not the defaults, put `PEA_ROOT=/path` and
+`PEA_LOGS=/path` at the top of the crontab. On the old machine comment the three lines out (`crontab -e`) the
+same day, so the two workstations never both write to jed.
 
-## 6. Checks after the first days
-- `data/pipeline.log`: datasync downloaded the new hourly files; four `--- <S> done ---` lines.
+## 6. Checks after the first days (all logs in `$PEA_LOGS`)
+- `pipeline.log`: four `--- <S> done ---` lines; `datasync.log`: the new hourly files were downloaded.
 - `processed_HF/<S>/<YYYYMM>/<S>_processing_log_<YYYYMM>.csv` grows by one block per day; `<S>_h2o_ref_*.csv` for LOWER/UPPER.
-- First of the month: `data/eddypro_monthly.log` ends with `eddypro_fcc done — OK` for every sensor with data.
-- `transfer_scripts/sync.log`: all syncs `✓`.
+- First of the month: `eddypro.log` ends with `eddypro_fcc done — OK` for every sensor with data.
+- `sync_jed.log`: all syncs `✓`.

@@ -1,13 +1,18 @@
 # Crontab of the PEA workstation (install with `crontab -e`, or `crontab crontab.txt` if nothing else runs).
-# Times are in the machine's local time zone.
+# Times are in the machine's local time zone. Logs go to $PEA_LOGS (default $PEA_ROOT/logs).
+#
+# cron starts with an almost empty PATH and does not expand variables or ~ in the lines below:
+# write the directory that holds `julia` out in full (`dirname $(which julia)`; /snap/bin for the
+# snap on cryosAlp1008, /home/<user>/.juliaup/bin for juliaup).
+PATH=/usr/local/bin:/usr/bin:/bin:/snap/bin
 # Set PEA_ROOT here if the data tree is not at the default /data/disk1/shared/PEA.
 # PEA_ROOT=/data/disk1/shared/PEA
 
-# Daily 02:03: FTP sync + Peddy (all sensors, resume mode). Log: $PEA_ROOT/data/pipeline.log
+# Daily 02:03: FTP sync + Peddy (all sensors, resume mode). Log: pipeline.log (datasync.log for the FTP part)
 3 2 * * *     /data/disk1/shared/PEA/transfer_scripts/run_daily_pipeline.sh
 
-# 1st of the month 10:00: EddyPro for the previous month. Log: $PEA_ROOT/data/eddypro_monthly.log
-0 10 1 * *    /data/disk1/shared/PEA/transfer_scripts/run_monthly_eddypro.sh
+# 1st of the month 10:00: EddyPro for the previous month. Log: eddypro.log
+0 10 1 * *    /data/disk1/shared/PEA/transfer_scripts/run_eddypro.sh
 
-# Every 10 days 06:00: copy processed and raw data to jed.
-0 6 */10 * *  /data/disk1/shared/PEA/transfer_scripts/sync_to_jed.sh >> /data/disk1/shared/PEA/transfer_scripts/sync.log 2>&1
+# Every 10 days 06:00: copy processed and raw data to jed. Log: sync_jed.log
+0 6 */10 * *  /data/disk1/shared/PEA/transfer_scripts/sync_to_jed.sh >> /data/disk1/shared/PEA/logs/sync_jed.log 2>&1
