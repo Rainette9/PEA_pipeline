@@ -33,6 +33,10 @@ Resilience:
   daily files are rebuilt to include them.
 
 Schedule it daily with cron/systemd/Task Scheduler.
+
+Paths: PEA_ROOT (default /data/disk1/shared/PEA) -> <PEA_ROOT>/data; log in PEA_LOGS
+(default <PEA_ROOT>/logs)/datasync.log. --backfill rebuilds the daily files of all days
+that have hourly files under data/_raw/<SENSOR> but no daily file yet (no FTP access).
 """
 
 from __future__ import annotations
@@ -51,6 +55,9 @@ from ftplib import FTP, FTP_TLS, error_perm
 from typing import Dict, Iterable, List, Optional, Tuple
 from logging.handlers import RotatingFileHandler
 
+
+PEA_ROOT = os.environ.get("PEA_ROOT", "/data/disk1/shared/PEA")
+PEA_LOGS = os.environ.get("PEA_LOGS", os.path.join(PEA_ROOT, "logs"))
 
 # -------------------------
 # Configuration (edit me)
@@ -75,13 +82,13 @@ CONFIG = {
     "mirror_folders": ["MRR_zipped"],
 
     # Local output root
-    "local_base": os.path.join(os.environ.get("PEA_ROOT", "/data/disk1/shared/PEA"), "data"),
+    "local_base": os.path.join(PEA_ROOT, "data"),
 
     # Raw hourly mirror (kept so daily merge can rebuild safely)
     "raw_subdir": "_raw",
 
     # JSON manifest/state file (tracks downloaded files and metadata)
-    "state_file": os.path.join(os.environ.get("PEA_ROOT", "/data/disk1/shared/PEA"), "data", "ftp_sync_state.json"),
+    "state_file": os.path.join(PEA_ROOT, "data", "ftp_sync_state.json"),
 
     # How far back (days) to rescan for late arriving files and to rebuild dailies
     "lookback_days": 30,
@@ -104,8 +111,9 @@ CONFIG = {
 # Logging
 # -------------------------
 # File handler with size limit (5 MB) and 3 backup files
+os.makedirs(PEA_LOGS, exist_ok=True)
 file_handler = RotatingFileHandler(
-    os.path.join(os.environ.get("PEA_ROOT", "/data/disk1/shared/PEA"), "data", "datasync.log"),
+    os.path.join(PEA_LOGS, "datasync.log"),
     maxBytes=5*1024*1024,  # 5 MB
     backupCount=3,         # keep 3 old log files
 )
@@ -552,6 +560,30 @@ def rebuild_daily_for_sensor(sensor: str, day_dt: datetime) -> int:
 
     return written
 
+def backfill_missing_days() -> int:
+    """
+    Rebuild the daily file of every day that has hourly files in <local_base>/_raw/<SENSOR>
+    but no daily file in <local_base>/<SENSOR>/<YYYYMM>/ (e.g. days older than the lookback
+    window, or after a restore of _raw). Returns the number of daily files written.
+    """
+    built = 0
+    for sensor in CONFIG["sensors"]:
+        raw_dir = os.path.join(CONFIG["local_base"], CONFIG["raw_subdir"], sensor)
+        if not os.path.isdir(raw_dir):
+            continue
+        missing_days = set()
+        for fn in os.listdir(raw_dir):
+            parsed = parse_hourly_filename(fn)
+            if not parsed:
+                continue
+            day, month, daily_name, _hhmm = parsed
+            if not os.path.exists(os.path.join(CONFIG["local_base"], sensor, month, daily_name)):
+                missing_days.add(day)
+        for day in sorted(missing_days):
+            built += rebuild_daily_for_sensor(sensor, datetime.strptime(day, "%Y-%m-%d"))
+        log.info("[%s] backfill: %d day(s) without daily file rebuilt", sensor, len(missing_days))
+    return built
+
 # -------------------------
 # Password helper
 # -------------------------
@@ -576,6 +608,8 @@ def main():
     ap = argparse.ArgumentParser(description="Daily FTP delta downloader + daily merge (no DB)")
     ap.add_argument("--dry-run", action="store_true", help="List actions, but do not download or write state")
     ap.add_argument("--no-merge", action="store_true", help="Disable hourly->daily merge")
+    ap.add_argument("--backfill", action="store_true",
+                    help="Only rebuild daily files missing for days present in _raw (no FTP access)")
     ap.add_argument("--lookback-days", type=int, default=None, help="Override lookback window (days)")
     ap.add_argument("-v", "--verbose", action="count", default=0, help="Increase logging verbosity (-v, -vv)")
     args = ap.parse_args()
@@ -609,6 +643,12 @@ def main():
 
     if args.dry_run:
         log.info("Dry-run mode enabled: no downloads, no state writes, no merges.")
+        return
+
+    if args.backfill:
+        built = backfill_missing_days()
+        log.info("Backfill complete. Wrote %d daily file(s).", built)
+        print(f"Backfill complete. Wrote {built} daily file(s). Log: {os.path.join(PEA_LOGS, 'datasync.log')}")
         return
 
     ftp = None
