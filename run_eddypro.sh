@@ -1,16 +1,15 @@
 #!/bin/bash
-# EddyPro engine: run eddypro_rp + eddypro_fcc for a list of months and sensors.
-# Called by run_monthly_eddypro.sh (cron) and tools/run_bulk_eddypro.sh (manual), or directly:
+# EddyPro engine: eddypro_rp + eddypro_fcc for a list of months and sensors.
 #
-#   MONTHS="202601 202602" bash run_eddypro_months.sh
-#   HF_BASE=/data/disk1/shared/PEA/2025/processed_HF LF_BASE=/data/disk1/shared/PEA/2025/processed_LF \
-#     MONTHS="202502 202503" SENSORS="LOWER UPPER" bash run_eddypro_months.sh
+#   run_eddypro.sh                                      # previous calendar month, all sensors (cron)
+#   MONTHS="202601 202602" nohup bash run_eddypro.sh &  # past months (e.g. after a Peddy rerun)
+#   MONTHS=202503 SENSORS="LOWER UPPER" bash run_eddypro.sh
 #
-# Environment (all optional except MONTHS):
-#   PEA_ROOT     data tree root, default /data/disk1/shared/PEA (scripts and engine live next to this file)
-#   HF_BASE      processed_HF root (default $PEA_ROOT/processed_HF)
-#   LF_BASE      processed_LF root for the biomet files (default $PEA_ROOT/processed_LF)
+# Environment (all optional; paths from pea_env.sh):
+#   MONTHS       months YYYYMM, default: the previous calendar month
 #   SENSORS      default "SFC LOWER UPPER BOTTOM"
+#   HF_BASE      processed_HF root (default $PEA_HF_OUT)
+#   LF_BASE      processed_LF root for the biomet files (default $PEA_LF_OUT)
 #   TAG          project-id suffix, default v3_5min_biomet (output files: eddypro_PEA_<S>_<M>_<TAG>_*)
 #   AVRG_LEN     flux averaging interval in minutes, default 5
 #   MAX_LACK     max % of missing samples per averaging period, default 20 (v3)
@@ -18,8 +17,8 @@
 #                to $ARCHIVE_DIR/<SENSOR>/<MONTH>/ before the run (never deleted)
 #   PARALLEL     number of sensors processed concurrently, default 1
 #   WORK_ROOT    per-job working directories (EddyPro writes fort.* and ../tmp relative to cwd),
-#                default <transfer_scripts>/eddypro/work
-#   LOG          log file, default $PEA_ROOT/data/eddypro_bulk.log
+#                default <repo>/eddypro/work
+#   LOG          log file, default $PEA_LOGS/eddypro.log
 #
 # Per sensor-month: biomet CSV built with make_biomet.py from the cleaned 1-min slow data
 # (use_biom=2; use_biom=0 if no slow data), template PEA_<S>.eddypro adjusted (dates, paths,
@@ -32,26 +31,21 @@
 # max_lack 20, rot_meth 0 (Peddy double-rotates), detrend 0, tlag_meth 2, hf_meth 5, WPL,
 # Burba on at SFC/LOWER/UPPER (BOTTOM is sonic-only), biomet TA/RH/PA from the 1-min slow data.
 
-PEA_ROOT=${PEA_ROOT:-/data/disk1/shared/PEA}
-TS=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+. "$(dirname "${BASH_SOURCE[0]}")/pea_env.sh"
 EDDYPRO_BIN=$TS/eddypro/eddypro-engine/bin/linux
 EDDYPRO_ENGINE=$TS/eddypro/eddypro-engine/
 SCRIPTS_DIR=$TS/eddypro/eddypro_scripts
 
-HF_BASE=${HF_BASE:-$PEA_ROOT/processed_HF}
-LF_BASE=${LF_BASE:-$PEA_ROOT/processed_LF}
+MONTHS=${MONTHS:-$(date -d "$(date +%Y-%m-01) -1 month" +%Y%m)}   # previous calendar month
+HF_BASE=${HF_BASE:-$PEA_HF_OUT}
+LF_BASE=${LF_BASE:-$PEA_LF_OUT}
 SENSORS=${SENSORS:-"SFC LOWER UPPER BOTTOM"}
 TAG=${TAG:-v3_5min_biomet}
 AVRG_LEN=${AVRG_LEN:-5}
 MAX_LACK=${MAX_LACK:-20}
 PARALLEL=${PARALLEL:-1}
 WORK_ROOT=${WORK_ROOT:-$TS/eddypro/work}
-LOG=${LOG:-$PEA_ROOT/data/eddypro_bulk.log}
-
-if [ -z "$MONTHS" ]; then
-    echo "run_eddypro_months.sh: MONTHS is required (e.g. MONTHS=\"202601 202602\")" >&2
-    exit 2
-fi
+LOG=${LOG:-$PEA_LOGS/eddypro.log}
 
 log() { echo "$(date -u '+%Y-%m-%d %H:%M:%S UTC') $*" >> "$LOG"; }
 
