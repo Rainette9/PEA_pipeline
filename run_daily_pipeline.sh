@@ -1,16 +1,11 @@
 #!/bin/bash
 # Daily cron: FTP delta sync + Peddy processing (resume mode) for all sensors.
-# PEA_ROOT (default /data/disk1/shared/PEA) selects the data tree; the scripts live next to this file.
-
-PEA_ROOT=${PEA_ROOT:-/data/disk1/shared/PEA}
-TS=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-LOG=$PEA_ROOT/data/pipeline.log
-JULIA_PROJECT=$TS/DataProcessingScriptsJulia
-SCRIPTS=$JULIA_PROJECT/scripts
-export PEA_ROOT
-export PEA_INPUT_BASE=$PEA_ROOT/data
-export PEA_HF_OUT=$PEA_ROOT/processed_HF
-export PEA_LF_OUT=$PEA_ROOT/processed_LF
+# Paths from pea_env.sh (PEA_ROOT, PEA_LOGS, PEA_INPUT_BASE, PEA_HF_OUT, PEA_LF_OUT).
+. "$(dirname "${BASH_SOURCE[0]}")/pea_env.sh"
+LOG=$PEA_LOGS/pipeline.log
+# The run at 02:03 processes yesterday's data; on 1 January that is still last year
+# (run_sensor.jl keeps only dates of PEA_YEAR and picks the calibration for it).
+export PEA_YEAR=$(date -u -d yesterday +%Y)
 
 echo "=== $(date -u '+%Y-%m-%d %H:%M:%S UTC') Starting daily pipeline ===" >> "$LOG"
 
@@ -22,7 +17,7 @@ echo "--- datasync done (exit $?) ---" >> "$LOG"
 # Step 2: Julia processing (resume mode — skips already-processed dates)
 for sensor in SFC LOWER UPPER BOTTOM; do
     echo "--- Processing $sensor ---" >> "$LOG"
-    julia --project="$JULIA_PROJECT" "$SCRIPTS/run_${sensor}.jl" >> "$LOG" 2>&1 \
+    julia --project="$JL" "$JL/scripts/run_sensor.jl" "$sensor" >> "$LOG" 2>&1 \
         && echo "--- $sensor done ---" >> "$LOG" \
         || echo "--- $sensor FAILED (exit $?) ---" >> "$LOG"
 done
