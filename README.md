@@ -27,6 +27,7 @@ datasync-snowflux-pea.py   FTP delta download + daily merge (called by run_daily
 run_eddypro_months.sh      EddyPro for a list of months/sensors (called by the monthly job and tools/run_bulk_eddypro.sh)
 make_biomet.py             EddyPro biomet file from the 1-min slow data (called by run_eddypro_months.sh)
 crontab.txt                the three cron lines
+DataProcessingScriptsJulia/  git submodule: the Julia driver around Peddy (tag v3); its Manifest.toml pins Peddy (fix_licor fe0c4c3)
 eddypro/
   eddypro_scripts/         EddyPro project templates PEA_<S>.eddypro and metadata meta_PEA_<S>.metadata (v3 settings)
   eddypro-engine/          git submodule: LI-COR EddyPro 7.0.9 source, built locally (docs/SETUP_NEW_WORKSTATION.md, step 2a)
@@ -45,10 +46,13 @@ docs/
   CLAUDE_rerun_2025_LOWER_UPPER.md  background notes for the 2025 LOWER/UPPER rerun
 ```
 
+`DataProcessingScriptsJulia/` is a submodule (https://github.com/Rainette9/DataProcessingScriptsJulia), pinned
+to the commit tagged `v3`. After pushing changes there, bump the pin here: check out the new commit inside the
+submodule, then `git add DataProcessingScriptsJulia && git commit`. After `git pull` on the workstation run
+`git submodule update` so the checkout follows the pin. The submodule is on a detached HEAD: `git checkout main`
+inside it before committing there.
+
 Not in this repository:
-- **`DataProcessingScriptsJulia/`**: the Julia driver around Peddy, its own repo
-  (https://github.com/Rainette9/DataProcessingScriptsJulia, tag `v3`), cloned next to these scripts.
-  Its `Manifest.toml` pins the Peddy version (`fix_licor` fe0c4c3).
 - **`.ftp_password`**: FTP password, mode 600, never committed.
 - SSH key `~/.ssh/epfl` for jed.
 
@@ -85,5 +89,4 @@ python3 tools/check_h2o.py summary $PEA_ROOT/processed_HF/UPPER
 ## Installation
 
 See `docs/SETUP_NEW_WORKSTATION.md`. Short version: clone with `--recurse-submodules`, build the EddyPro engine
-in `eddypro/eddypro-engine/prj` with `make`, clone `DataProcessingScriptsJulia` next to the scripts and run
-`Pkg.instantiate()`, put `.ftp_password` in place, install `crontab.txt`.
+in `eddypro/eddypro-engine/prj` with `make`, run `Pkg.instantiate()` in `DataProcessingScriptsJulia`, put `.ftp_password` in place, install `crontab.txt`.

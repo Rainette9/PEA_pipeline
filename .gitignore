@@ -7,7 +7,5 @@ eddypro/tmp/
 *.log
 __pycache__/
 typescript
-# the Julia driver is its own repository (github.com/Rainette9/DataProcessingScriptsJulia)
-DataProcessingScriptsJulia/
 # old template backups and EddyPro scratch files
 eddypro/eddypro_scripts/_old/

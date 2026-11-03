@@ -2,3 +2,6 @@
 	path = eddypro/eddypro-engine
 	url = https://github.com/LI-COR-Environmental/eddypro-engine.git
 	ignore = untracked
+[submodule "DataProcessingScriptsJulia"]
+	path = DataProcessingScriptsJulia
+	url = https://github.com/Rainette9/DataProcessingScriptsJulia.git

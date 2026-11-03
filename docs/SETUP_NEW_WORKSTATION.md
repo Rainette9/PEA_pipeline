@@ -15,13 +15,19 @@ rsync to jed) from the same scripts. Everything below assumes `PEA_ROOT=/data/..
 ## 2. Code
 ```
 mkdir -p $PEA_ROOT && cd $PEA_ROOT
-git clone --recurse-submodules https://github.com/Rainette9/PEA_pipeline.git transfer_scripts   # pipeline scripts + EddyPro engine source
+git clone --recurse-submodules https://github.com/Rainette9/PEA_pipeline.git transfer_scripts
+#  -> pipeline scripts + submodules DataProcessingScriptsJulia (pinned to tag v3) and EddyPro engine source
 #  -> then build the EddyPro engine (step 2a)
-git clone https://github.com/Rainette9/DataProcessingScriptsJulia transfer_scripts/DataProcessingScriptsJulia
-cd transfer_scripts/DataProcessingScriptsJulia && git checkout v3   # or main
+cd transfer_scripts/DataProcessingScriptsJulia
 julia --project=. -e 'using Pkg; Pkg.Registry.update(); Pkg.instantiate(); Pkg.status("Peddy")'
 #  -> Peddy v0.1.1 https://github.com/pleibers/Peddy.jl.git#fix_licor (tree d5815132 = commit fe0c4c3)
 ```
+`DataProcessingScriptsJulia` is checked out at the commit this repo pins (detached HEAD). To update it later:
+`git pull && git submodule update` in `transfer_scripts`. Before committing Julia changes on the workstation,
+`git checkout main` inside the submodule.
+A machine that already has `DataProcessingScriptsJulia/` as a separate plain clone (e.g. cryosAlp1008) keeps it:
+`git pull && git submodule update --init` adopts the existing clone as the submodule and checks out the pinned
+commit. Commit or stash local changes in it first.
 Secrets and keys (never in git): `transfer_scripts/.ftp_password` (mode 600), `~/.ssh/epfl` (+ `.pub`) for
 `engbers@jed.hpc.epfl.ch`, and `ssh-keyscan jed.hpc.epfl.ch >> ~/.ssh/known_hosts`.
 Set the git identity: `git config user.name Rainette; git config user.email rainette.engbers@epfl.ch`.
